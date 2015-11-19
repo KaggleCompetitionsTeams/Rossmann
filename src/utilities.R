@@ -33,7 +33,13 @@ rmspe <- function(true_vec, pred_vec) {
 #NA proportion#
 
 na_proportion <- function(dataset, digits = 2) {
-  # this function computes the proportion of missing values
-  # for each column in dataset
-  sapply(dataset, function(x) round(sum(is.na(x)) / length(x), digits = digits))
+  # returns the proportion of missing values
+  # in each column of dataset, for which there is NAs
+  na_col <- names(which(apply(dataset, 2, function(x) any(is.na(x))) == TRUE))
+  if (length(na_col) >= 1) {
+    sapply(select(dataset, one_of(na_col)), 
+           function(x) round(sum(is.na(x)) / length(x), digits = digits))
+  } else {
+    cat("No missing values.")
+  }
 }
