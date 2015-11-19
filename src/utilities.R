@@ -6,8 +6,7 @@ libs <- c('readr', 'stringr')
 sapply(libs, require, character.only=TRUE)
 
 ###############################################################################
-#Submit function###############################################################
-###############################################################################
+#Submit function#
 
 submit <- function(pred_vec, file_path) {
   # this function takes as input 
@@ -20,3 +19,10 @@ submit <- function(pred_vec, file_path) {
 # Example usage:
 # submit(rep(0,nrow(test_data)), 
 # "~/Documents/kaggle_data/kaggle_rossmann/submission1.csv")
+
+#Error function#
+
+rmspe <- function(true_vec, pred_vec) {
+  error <- sqrt(mean( (true_vec - pred_vec)^2 / true_vec ))
+  return(error)
+}
