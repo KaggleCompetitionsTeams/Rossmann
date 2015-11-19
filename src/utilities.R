@@ -23,6 +23,17 @@ submit <- function(pred_vec, file_path) {
 #Error function#
 
 rmspe <- function(true_vec, pred_vec) {
+  # this function computes the rmspe given 
+  # true_vec: a vector of observations
+  # pred_vec: a vector of predictions
   error <- sqrt(mean( (true_vec - pred_vec)^2 / true_vec ))
   return(error)
+}
+
+#NA proportion#
+
+na_proportion <- function(dataset, digits = 2) {
+  # this function computes the proportion of missing values
+  # for each column in dataset
+  sapply(dataset, function(x) round(sum(is.na(x)) / length(x), digits = digits))
 }
