@@ -1,0 +1,150 @@
+---
+title: "initial_exploration"
+output: pdf_document
+---
+
+# Librairies and data import
+
+We start by importing the Hadleyverse and importing our data.
+
+```{r, message=FALSE, results = 'hide', warning=FALSE}
+libs <- c('readr', 'lubridate', 'magrittr', 'tidyr', 'dplyr')
+sapply(libs, require, character.only = TRUE)
+train <- read_csv('~/Documents/kaggle_data/kaggle_rossmann/data/train.csv')
+test <- read_csv('~/Documents/kaggle_data/kaggle_rossmann/data/test.csv')
+stores <- read_csv('~/Documents/kaggle_data/kaggle_rossmann/data/store.csv')
+```
+
+We start by examining the train and stores data (the test data is structured as the train).
+
+```{r}
+head(train, 3)
+head(stores, 3)
+```
+
+The train set contains information on **Sales**, which is the data to predict (the gross volume of cash made by a store during a day), while the stores data contains informations about the stores (distance to their competition for example).
+
+We start by joining the datasets using the join method of dplyr.
+
+```{r}
+train <- inner_join(train, stores, by = 'Store')
+test <- inner_join(test, stores, by = 'Store')
+head(train, 3)
+```
+
+# NA filling
+
+This sections explores basic strategies for NA filling. First we use the na_proportion function (defined in utilities) to show which columns have NAs and in which proportion.
+
+```{r}
+na_proportion <- function(dataset, digits = 2) {
+  # returns the proportion of missing values
+  # in each column of dataset, for which there is NAs
+  na_col <- names(which(apply(dataset, 2, function(x) any(is.na(x))) == TRUE))
+  if (length(na_col) >= 1) {
+    sapply(select(dataset, one_of(na_col)), 
+           function(x) round(sum(is.na(x)) / length(x), digits = digits))
+  } else {
+    cat("No missing values.")
+  }
+}
+na_proportion(train)
+```
+
+## Competition Distance
+We see a few missing values in the CompetitionDistance field, we can show explicitly those shops which lacks this information.
+
+```{r}
+filter(stores, is.na(CompetitionDistance)) %>% select(Store, CompetitionDistance)
+```
+
+It seems reasonable to imagine that those three stores do not have any competition? 
+
+We make the disctuable assumption to fill those values by the maximum distance to the competition observed.
+
+```{r}
+max_comp_dist <- max(stores$CompetitionDistance, na.rm = TRUE)
+train[is.na(train$CompetitionDistance), 'CompetitionDistance'] <- max_comp_dist
+test[is.na(test$CompetitionDistance), 'CompetitionDistance'] <- max_comp_dist
+```
+
+## Some shop in the test set are closed
+
+It should be noticed that some Sales to be predicted are for closed shops.
+
+```{r}
+test %>% filter(Open == 0) %>% head(3)
+```
+
+We need to guarantee that for those days our prediction are 0. To do so we define a function in utilities which should **always** be applied to any prediction vector.
+
+```{r}
+set_pred_closed <- function(pred_vec) {
+  # this function set to zero the Sales predictions
+  # anytime the shop is closed in the test set
+  pred_vec[which(test$Open == 0)] <- 0
+}
+```
+
+
+## Some shop have missing Open value
+
+```{r}
+test %>% filter(is.na(Open)) %>% head(3)
+```
+
+To see what the filling should be we need to inspect the corresponding dates. We can notice already that the Promo takes the value 1 for some of those days: so even the shop is open and there was a bug, or the shop was in promo and closed !
+
+Let us do saome date aprsing (using lubridate and the fact that this is a german retailer).
+
+```{r}
+train$Date <- ymd(train$Date, tz = "Europe/Berlin")
+test$Date <- ymd(test$Date, tz = "Europe/Berlin")
+```
+ Now we can explore the days where we see that anomaly.
+ 
+ 
+```{r}
+test_open_anomaly <- filter(test, is.na(Open))
+wday(test_open_anomaly$Date, label = TRUE)
+```
+
+No sunday ! When is this shop usually closed ?
+
+```{r}
+store_622 <- filter(test, Store == 622)
+store_622_closed <- filter(store_622, Open == 0, StateHoliday == 0)
+unique(wday(store_622_closed$Date, label = TRUE))
+```
+
+It is only closed on Sunday ! Then we decide to fill those values with 1's (i.e. the shop was probably open).
+
+```{r}
+test[is.na(test$Open), 'Open'] <- 1
+```
+
+## The state holiday problem
+
+StateHoliday never takes the value 1!
+
+```{r}
+sum(train$StateHoliday == 0, na.rm = TRUE)
+sum(train$StateHoliday == 1, na.rm = TRUE) # jamais 1!
+sum(test$StateHoliday == 0, na.rm = TRUE)
+sum(test$StateHoliday == 1, na.rm = TRUE) # jamais 1!
+```
+
+Let us look at some of those rows where StateHoliday is missing.
+
+```{r}
+filter(train, is.na(StateHoliday)) %>% select(Date)
+```
+
+Those dates are probably holidays, so we decide to fill by 1 all those StateHoliday missing values.
+
+```{r}
+train[is.na(train$StateHoliday), 'StateHoliday'] <- 1
+test[is.na(test$StateHoliday), 'StateHoliday'] <- 1
+```
+
+
