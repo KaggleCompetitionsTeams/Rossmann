@@ -43,3 +43,10 @@ na_proportion <- function(dataset, digits = 2) {
     cat("No missing values.")
   }
 }
+
+#Set pred to zero
+set_pred_closed <- function(pred_vec) {
+  # this function set to zero the Sales predictions
+  # anytime the shop is closed in the test set
+  pred_vec[which(test$Open == 0)] <- 0
+}
