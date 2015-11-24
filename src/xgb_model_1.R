@@ -10,9 +10,17 @@ sapply(libs, require, character.only = TRUE)
 #my favorite seed^^
 
 cat("reading the train and test data\n")
-train <- read_csv("~/Documents/kaggle_data/kaggle_rossmann/data/train.csv")
-test  <- read_csv("~/Documents/kaggle_data/kaggle_rossmann/data/test.csv")
-store <- read_csv("~/Documents/kaggle_data/kaggle_rossmann/data/store.csv")
+train <- read_csv('~/Documents/kaggle_data/kaggle_rossmann/data/train.csv',
+                  col_types = list(
+                    StateHoliday = col_factor(c("0", "a", "b", "c"))
+                  ))
+
+test <- read_csv('~/Documents/kaggle_data/kaggle_rossmann/data/test.csv',
+                 col_types = list(
+                   StateHoliday = col_factor(c("0", "a", "b", "c"))
+                 ))
+
+stores <- read_csv('~/Documents/kaggle_data/kaggle_rossmann/data/store.csv')
 
 # joining
 
@@ -39,11 +47,11 @@ test$year <- year(test$Date)
 train$day <- day(train$Date)
 test$day <- day(test$Date)
 
-train <- train[,-c(3,8)]
+train <- train[,-c(3)]
 
-test <- test[,-c(4,7)]
+test <- test[,-c(4)]
 
-feature.names <- names(train)[c(1,2,5:19)]
+feature.names <- names(train)[c(1,2,5:20)]
 cat("Feature Names\n")
 feature.names
 
@@ -94,6 +102,9 @@ clf <- xgb.train(   params              = param,
 pred <- exp(predict(clf, data.matrix(test[,feature.names]))) -1
 set_pred_closed(pred)
 cat("saving the submission file\n")
-submit(pred, "~/Documents/kaggle_data/kaggle_rossmann/submissions/submission_xgb_2.csv")
+submit(pred, 
+       "~/Documents/kaggle_data/kaggle_rossmann/submissions/submission_xgb_3.csv")
+
 # without set_pred_closed : 0.11714 (submission_xgb_1.csv)
 # with set_pred_closed: same score !
+# with stateholydays correctly handled (submission_xgb_3) 0.11127
