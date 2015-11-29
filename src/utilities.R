@@ -12,7 +12,7 @@ submit <- function(pred_vec, file_path) {
   # this function takes as input 
   # pred_vec: a vector of sales predictions
   # file_path: a string which gives the path where to write the submission
-  submit_df <- data.frame(Id = 1:41088, Sales = pred_vec)
+  submit_df <- data.frame(Id = seq_along(pred_vec), Sales = pred_vec)
   write_csv(submit_df, file_path)
 }
 
@@ -26,7 +26,8 @@ rmspe <- function(true_vec, pred_vec) {
   # this function computes the rmspe given 
   # true_vec: a vector of observations
   # pred_vec: a vector of predictions
-  error <- sqrt(mean( (true_vec - pred_vec)^2 / true_vec ))
+  non_zero_indices <- which(true_vec > 0)
+  error <- sqrt(mean( (true_vec[non_zero_indices] - pred_vec[non_zero_indices])^2 / true_vec[non_zero_indices] ))
   return(error)
 }
 
@@ -49,4 +50,13 @@ set_pred_closed <- function(pred_vec) {
   # this function set to zero the Sales predictions
   # anytime the shop is closed in the test set
   pred_vec[which(test$Open == 0)] <- 0
+}
+
+#Validation set
+split_period <- function(begin_date, end_date) {
+  validation_interval <- interval(begin_validation, end_validation)
+  logical_interval <- train$Date %within% validation_interval
+  split_test <- list(train_train = train[!logical_interval, ],
+                     train_test = train[logical_interval, ])
+  return(split_test)
 }
